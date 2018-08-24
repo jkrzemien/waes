@@ -1,0 +1,56 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: "jacoco"
+
+group = 'com.waes.interview'
+version = '0.0.1'
+
+description = """ WAES Assignment """
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '2.0.4.RELEASE'
+    testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '2.0.4.RELEASE'
+}
+
+sourceSets {
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration/java')
+        }
+        resources.srcDir file('src/integration/resources')
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+jacoco {
+    toolVersion = "0.8.1"
+    reportsDir = file("$buildDir/reports/jacoco")
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = files(sourceSets.integrationTest.output.classesDirs)
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    outputs.upToDateWhen { false }
+}
+
+jacocoTestReport {
+    executionData = fileTree(buildDir).include("/jacoco/*.exec")
+    reports {
+        xml.enabled false
+        csv.enabled false
+        html.destination file("${buildDir}/reports/jacoco")
+    }
+}
