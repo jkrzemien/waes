@@ -29,6 +29,18 @@ communicated
 * Nice to haves
   * Suggestions for improvement
 
+## Running the REST application
+
+To immediately run the application execute: `gradle clean bootRun`
+
+In case you need to package the application first to run it somewhere else, you can build and package the application:
+
+`gradle clean bootJar`
+
+and then:
+
+`java -jar build\libs\waes-assignment-0.0.1.jar`
+
 ## Testing
 
 ### How do I execute unit tests only?
@@ -43,26 +55,42 @@ gradle clean test
 gradle clean integrationTest
 ```
 
-### How do I execute all tests?
+### How do I execute End to End tests only?
 
 ```bash
-gradle clean test integrationTest
+gradle clean e2eTest
 ```
 
-### How do I execute everything in here?
+**IMPORTANT:** In order to execute End to End tests, the application **must be running**.
+
+To do so, execute `gradle clean bootRun` in a _different_ terminal or command prompt console.
+
+By default, End to End tests run against `http://localhost:8080` but this can be changed by setting the _ENVIRONMENT_ variable `SUT_ENV`.
+
+Windows example: 
+
+```
+set SUT_ENV=http://www.somehost.com
+```
+
+*nix example: 
 
 ```bash
-gradle clean test integrationTest jacocoTestReport Javadoc
+export SUT_ENV=http://www.somehost.com
 ```
+
 
 ### Reports
 
 #### HTML execution results
 
-Executing any of the following tasks will generate an HTML report inside `build/reports/tests` folder.
+Executing any of the test tasks will generate an HTML report inside `build/reports/tests` folder.
 
  * `test`
  * `integrationTest`
+ * `e2eTest`
+ 
+ Additionally, End to End tests will also generate Cucumber specific reports inside `build/reports/cucumber-html` folder and `build/reports/cucumber-report.json`.
 
 #### Code coverage
 
@@ -76,4 +104,4 @@ Appending `jacocoTestReport` task to any testing related task will generate a co
 
 ### Documentation
 
-JavaDocs can be generated via `gradle Javadoc` task and located at `build/docs/javadoc`.
+JavaDocs can be generated via `gradle javadoc` task and located at `build/docs/javadoc`.

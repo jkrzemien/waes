@@ -1,6 +1,18 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath(
+                'org.springframework.boot:spring-boot-gradle-plugin:2.0.4.RELEASE'
+        )
+    }
+}
+
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: "jacoco"
+apply plugin: 'org.springframework.boot'
 
 group = 'com.waes.interview'
 version = '0.0.1'
@@ -14,25 +26,30 @@ repositories {
     jcenter()
 }
 
-dependencies {
-    compile group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '2.0.4.RELEASE'
-    testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '2.0.4.RELEASE'
-}
-
 sourceSets {
     integrationTest {
         java {
+            srcDir file('src/integration/java')
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
-            srcDir file('src/integration/java')
         }
         resources.srcDir file('src/integration/resources')
     }
+
+    e2eTest {
+        java.srcDir 'src/e2e/java'
+        resources.srcDir file('src/e2e/resources')
+    }
 }
 
-configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+dependencies {
+    compile 'org.springframework.boot:spring-boot-starter-web:2.0.4.RELEASE'
+    testCompile 'org.springframework.boot:spring-boot-starter-test:2.0.4.RELEASE'
+    integrationTestCompile configurations.testCompile
+    e2eTestCompile 'io.cucumber:cucumber-java:3.0.2'
+    e2eTestCompile 'io.cucumber:cucumber-junit:3.0.2'
+    e2eTestCompile 'io.rest-assured:rest-assured:3.1.1'
+    e2eTestCompile 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
 }
 
 jacoco {
@@ -40,17 +57,37 @@ jacoco {
     reportsDir = file("$buildDir/reports/jacoco")
 }
 
+jacocoTestReport {
+    description = "Generates JaCoCo code coverage reports for Unit and Integration tests"
+    executionData = fileTree(buildDir).include("/jacoco/*.exec")
+    reports {
+        xml.enabled = false
+        csv.enabled = false
+        html.destination file("${buildDir}/reports/jacoco")
+    }
+}
+
 task integrationTest(type: Test) {
+    description = "Runs Integration Tests"
     testClassesDirs = files(sourceSets.integrationTest.output.classesDirs)
-    classpath = sourceSets.integrationTest.runtimeClasspath
+    classpath += sourceSets.integrationTest.runtimeClasspath
     outputs.upToDateWhen { false }
 }
 
-jacocoTestReport {
-    executionData = fileTree(buildDir).include("/jacoco/*.exec")
-    reports {
-        xml.enabled false
-        csv.enabled false
-        html.destination file("${buildDir}/reports/jacoco")
-    }
+task e2eTest(type: Test) {
+    description = "Runs End to End tests"
+    testClassesDirs = files(sourceSets.e2eTest.output.classesDirs)
+    classpath += sourceSets.e2eTest.runtimeClasspath
+    outputs.upToDateWhen { false }
+}
+
+check.dependsOn integrationTest
+integrationTest.mustRunAfter test
+
+bootJar {
+    launchScript()
+}
+
+springBoot {
+    mainClassName = 'com.waes.interview.assignment.App'
 }
