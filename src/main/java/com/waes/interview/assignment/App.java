@@ -2,9 +2,6 @@ package com.waes.interview.assignment;
 
 import com.waes.interview.assignment.differentiator.ByteArrayDiffer;
 import com.waes.interview.assignment.differentiator.Differentiable;
-import com.waes.interview.assignment.models.DiffOperands;
-import com.waes.interview.assignment.storage.InMemoryStorage;
-import com.waes.interview.assignment.storage.Storage;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -41,11 +38,6 @@ public class App {
    */
   @Configuration
   static class AppConfiguration {
-
-    @Bean
-    public Storage<DiffOperands<byte[]>> storage() {
-      return new InMemoryStorage<>();
-    }
 
     @Bean
     public Differentiable<byte[]> differentiable() {

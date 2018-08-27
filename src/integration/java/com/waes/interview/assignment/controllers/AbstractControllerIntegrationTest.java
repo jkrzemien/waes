@@ -86,6 +86,10 @@ public abstract class AbstractControllerIntegrationTest {
     return mapper.readValue(data, type);
   }
 
+  protected String toJson(Object o) throws IOException {
+    return mapper.writeValueAsString(o);
+  }
+
   enum DiffEndpoint {
 
     ENDPOINT_LEFT("/v1/diff/%s/left"),
@@ -103,7 +107,7 @@ public abstract class AbstractControllerIntegrationTest {
       return endpoint;
     }
 
-    public String with(String id) {
+    public String with(Long id) {
       return format(endpoint, id);
     }
 

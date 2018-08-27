@@ -4,7 +4,7 @@ buildscript {
     }
     dependencies {
         classpath(
-                'org.springframework.boot:spring-boot-gradle-plugin:2.0.4.RELEASE'
+                'org.springframework.boot:spring-boot-gradle-plugin:2.0.3.RELEASE'
         )
     }
 }
@@ -43,7 +43,9 @@ sourceSets {
 }
 
 dependencies {
-    compile 'org.springframework.boot:spring-boot-starter-web:2.0.4.RELEASE'
+    compile 'org.springframework.boot:spring-boot-starter-data-rest:2.0.4.RELEASE'
+    compile 'org.springframework.boot:spring-boot-starter-data-jpa:2.0.4.RELEASE'
+    compile("com.h2database:h2:1.4.197")
     testCompile 'org.springframework.boot:spring-boot-starter-test:2.0.4.RELEASE'
     integrationTestCompile configurations.testCompile
     e2eTestCompile 'io.cucumber:cucumber-java:3.0.2'

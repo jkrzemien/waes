@@ -4,9 +4,10 @@ import com.waes.interview.assignment.models.DifferencesResponse;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Random;
+
 import static com.waes.interview.assignment.controllers.AbstractControllerIntegrationTest.DiffEndpoint.*;
 import static java.lang.String.format;
-import static java.util.UUID.randomUUID;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,14 +24,14 @@ public class DifferencesControllerNegativeIT extends AbstractControllerIntegrati
   private static final DifferencesResponse INVALID = new DifferencesResponse("Invalid Base64 payload!");
   private static final DifferencesResponse WRONG_ORDER = new DifferencesResponse("Must call endpoint /left before calling endpoint /right");
 
-  private String id;
+  private Long id;
 
   /**
    * Generate a random ID per test
    */
   @Before
   public void setUp() {
-    this.id = randomUUID().toString();
+    this.id = new Random().nextLong();
   }
 
   @Test
@@ -86,7 +87,7 @@ public class DifferencesControllerNegativeIT extends AbstractControllerIntegrati
 
     doGet(ENDPOINT_DIFF.with(id))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message", is("Cannot operate with either operand (Left/Right) missing!")))
+        .andExpect(jsonPath("$.message", is(format("No comparison pending for ID [%s]", id))))
         .andExpect(jsonPath("$", not(hasKey("differences"))));
 
   }

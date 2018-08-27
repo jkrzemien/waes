@@ -1,26 +1,27 @@
 package com.waes.interview.assignment.controllers;
 
 import com.waes.interview.assignment.differentiator.Differentiable;
-import com.waes.interview.assignment.models.DiffOperands;
+import com.waes.interview.assignment.models.Difference;
+import com.waes.interview.assignment.models.DifferenceOperand;
 import com.waes.interview.assignment.models.DifferencesRequest;
 import com.waes.interview.assignment.models.DifferencesResponse;
-import com.waes.interview.assignment.storage.Storage;
+import com.waes.interview.assignment.repositories.OperandsRepository;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Base64;
+import java.util.List;
 import java.util.Random;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
-import static java.util.UUID.randomUUID;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
@@ -44,18 +45,15 @@ public class DifferencesControllerTest {
    * Mock dependencies
    */
   @Mock
-  private Storage<DiffOperands<byte[]>> storage;
+  private OperandsRepository repository;
 
   @Mock
   private Differentiable<byte[]> differentiable;
 
-  @Captor
-  private ArgumentCaptor<DiffOperands<byte[]>> captor;
-
   /**
    * Class members
    */
-  private String id;
+  private Long id;
   private DifferencesRequest request;
 
   /**
@@ -72,10 +70,10 @@ public class DifferencesControllerTest {
   @Before
   public void setUp() {
     // Reset mocks state
-    reset(storage, differentiable);
+    reset(repository, differentiable);
 
-    this.differencesController = new DifferencesController(storage, differentiable);
-    this.id = randomUUID().toString();
+    this.differencesController = new DifferencesController(repository, differentiable);
+    this.id = 1L;
     this.request = new DifferencesRequest(createBase64Data());
 
   }
@@ -86,13 +84,17 @@ public class DifferencesControllerTest {
   @After
   public void tearDown() {
     // Verify that no other dependencies were called.
-    verifyNoMoreInteractions(storage, differentiable);
+    verifyNoMoreInteractions(repository, differentiable);
   }
 
   @Test
   public void setLeftOperand() {
 
-    ResponseEntity<DifferencesResponse> response = differencesController.leftDiffData(id, request);
+    // Set expectations
+    when(repository.existsByOperationIdAndProcessed(id, false)).thenReturn(false);
+
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.leftOperand(id, request);
 
     assertThat("There is a result", response, is(notNullValue()));
     assertThat("HTTP return code is OK (200)", response.getStatusCode(), is(OK));
@@ -103,14 +105,54 @@ public class DifferencesControllerTest {
     assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
 
     // Verify that storage.set() was called exactly once. Uses captured argument.
-    verify(storage, times(1)).set(eq(id), captor.capture());
+    verify(repository, times(1)).existsByOperationIdAndProcessed(id, false);
+    verify(repository, times(1)).save(any(DifferenceOperand.class));
+
+  }
+
+  @Test
+  public void setLeftOperandAgain() {
+
+    // Set expectations
+    when(repository.existsByOperationIdAndProcessed(id, false)).thenReturn(true);
+
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.leftOperand(id, request);
+
+    assertThat("There is a result", response, is(notNullValue()));
+    assertThat("HTTP return code is OK (200)", response.getStatusCode(), is(BAD_REQUEST));
+
+    DifferencesResponse differences = response.getBody();
+
+    assertThat("Message matches expected value", differences.getMessage(), is("The transaction ID has pending operations. Please, specify a different one."));
+    assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
+
+    // Verify that storage.set() was called exactly once. Uses captured argument.
+    verify(repository, times(1)).existsByOperationIdAndProcessed(id, false);
+
+  }
+
+  @Test
+  public void setNullLeftId() {
+
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.leftOperand(null, null);
+
+    assertThat("There is a result", response, is(notNullValue()));
+    assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
+
+    DifferencesResponse differences = response.getBody();
+
+    assertThat("Message matches expected value", differences.getMessage(), is("Invalid ID"));
+    assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
 
   }
 
   @Test
   public void setNullLeftOperand() {
 
-    ResponseEntity<DifferencesResponse> response = differencesController.leftDiffData(id, null);
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.leftOperand(id, null);
 
     assertThat("There is a result", response, is(notNullValue()));
     assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
@@ -125,7 +167,8 @@ public class DifferencesControllerTest {
   @Test
   public void setEmptyLeftOperand() {
 
-    ResponseEntity<DifferencesResponse> response = differencesController.leftDiffData(id, new DifferencesRequest(null));
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.leftOperand(id, new DifferencesRequest(null));
 
     assertThat("There is a result", response, is(notNullValue()));
     assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
@@ -138,14 +181,43 @@ public class DifferencesControllerTest {
   }
 
   @Test
-  public void setRightOperandWithExistingLeftOperand() {
-    final DiffOperands<byte[]> operands = new DiffOperands<>(new byte[10], null);
+  public void setRightOperandAgain() {
+
+    DifferenceOperand leftOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    List<DifferenceOperand> operands = asList(leftOperand, leftOperand);
 
     // Set expectations
-    when(storage.hasEntry(id)).thenReturn(true);
-    when(storage.remove(id)).thenReturn(operands);
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(operands);
 
-    ResponseEntity<DifferencesResponse> response = differencesController.rightDiffData(id, request);
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.rightOperand(id, request);
+
+    assertThat("There is a result", response, is(notNullValue()));
+    assertThat("HTTP return code is OK (200)", response.getStatusCode(), is(BAD_REQUEST));
+
+    DifferencesResponse differences = response.getBody();
+
+    assertThat("Message matches expected value", differences.getMessage(), is("The transaction ID has pending operations. Please, specify a different one."));
+    assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
+
+    // Verify mocks invocations
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
+
+  }
+
+  @Test
+  public void setRightOperandWithExistingLeftOperand() {
+
+    DifferenceOperand leftOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    DifferenceOperand rightOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    List<DifferenceOperand> operands = singletonList(leftOperand);
+
+    // Set expectations
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(operands);
+    when(repository.save(rightOperand)).thenReturn(rightOperand);
+
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.rightOperand(id, request);
 
     assertThat("There is a result", response, is(notNullValue()));
     assertThat("HTTP return code is OK (200)", response.getStatusCode(), is(OK));
@@ -156,19 +228,20 @@ public class DifferencesControllerTest {
     assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
 
     // Verify mocks invocations
-    verify(storage, times(1)).hasEntry(eq(id));
-    verify(storage, times(1)).set(eq(id), captor.capture());
-    verify(storage, times(1)).remove(eq(id));
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
+    verify(repository, times(1)).save(eq(rightOperand));
 
   }
 
   @Test
   public void setRightOperandWithoutExistingLeftOperand() {
+    List<DifferenceOperand> operands = emptyList();
 
     // Set expectations
-    when(storage.hasEntry(id)).thenReturn(false);
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(operands);
 
-    ResponseEntity<DifferencesResponse> response = differencesController.rightDiffData(id, request);
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.rightOperand(id, request);
 
     assertThat("There is a result", response, is(notNullValue()));
     assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
@@ -179,17 +252,15 @@ public class DifferencesControllerTest {
     assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
 
     // Verify mocks invocations
-    verify(storage, times(1)).hasEntry(eq(id));
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
 
   }
 
   @Test
   public void setNullRightOperand() {
 
-    // Set expectations
-    when(storage.hasEntry(id)).thenReturn(true);
-
-    ResponseEntity<DifferencesResponse> response = differencesController.rightDiffData(id, null);
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.rightOperand(id, null);
 
     assertThat("There is a result", response, is(notNullValue()));
     assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
@@ -199,38 +270,50 @@ public class DifferencesControllerTest {
     assertThat("Message matches expected value", differences.getMessage(), is("Invalid Base64 payload!"));
     assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
 
-    // Verify mocks invocations
-    verify(storage, times(1)).hasEntry(eq(id));
-
   }
 
   @Test
   public void setEmptyRightOperand() {
 
-    ResponseEntity<DifferencesResponse> response = differencesController.rightDiffData(id, new DifferencesRequest(null));
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.rightOperand(id, new DifferencesRequest(null));
 
     assertThat("There is a result", response, is(notNullValue()));
     assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
 
     DifferencesResponse differences = response.getBody();
 
-    assertThat("Message matches expected value", differences.getMessage(), is("Must call endpoint /left before calling endpoint /right"));
+    assertThat("Message matches expected value", differences.getMessage(), is("Invalid Base64 payload!"));
     assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
-
-    // Verify mocks invocations
-    verify(storage, times(1)).hasEntry(eq(id));
 
   }
 
   @Test
-  public void diffOperationSuccessful() {
+  public void setNullRightId() {
 
-    DiffOperands<byte[]> operands = new DiffOperands<>(new byte[10], new byte[10]);
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.rightOperand(null, null);
+
+    assertThat("There is a result", response, is(notNullValue()));
+    assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
+
+    DifferencesResponse differences = response.getBody();
+
+    assertThat("Message matches expected value", differences.getMessage(), is("Invalid ID"));
+    assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
+
+  }
+
+  @Test
+  public void diffOperationSuccessfulEquals() {
+    DifferenceOperand leftOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    DifferenceOperand rightOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    List<DifferenceOperand> operands = asList(leftOperand, rightOperand);
 
     // Set expectations
-    when(storage.remove(id)).thenReturn(operands);
-    when(differentiable.diff(eq(operands.getLeft()), eq(operands.getRight()))).thenReturn(emptyList());
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(operands);
 
+    // Invoke method to test
     ResponseEntity<DifferencesResponse> response = differencesController.diffOperation(id);
 
     assertThat("There is a result", response, is(notNullValue()));
@@ -242,18 +325,77 @@ public class DifferencesControllerTest {
     assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
 
     // Verify mocks invocations
-    verify(storage, times(1)).remove(eq(id));
-    verify(differentiable, times(1)).diff(eq(operands.getLeft()), eq(operands.getRight()));
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
+    verify(repository, times(1)).saveAll(eq(operands));
+    verify(differentiable, times(1)).diff(any(byte[].class), any(byte[].class));
+
+  }
+
+  @Test
+  public void diffOperationSuccessfulNotEqualSize() {
+    DifferenceOperand leftOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    DifferenceOperand rightOperand = DifferenceOperand.from(id, createBase64Data("SOMETHING".getBytes()), false);
+    List<DifferenceOperand> operands = asList(leftOperand, rightOperand);
+
+    // Set expectations
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(operands);
+
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.diffOperation(id);
+
+    assertThat("There is a result", response, is(notNullValue()));
+    assertThat("HTTP return code is OK (200)", response.getStatusCode(), is(OK));
+
+    DifferencesResponse differences = response.getBody();
+
+    assertThat("Message matches expected value", differences.getMessage(), is("Byte arrays are NOT equal!"));
+    assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
+
+    // Verify mocks invocations
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
+    verify(repository, times(1)).saveAll(eq(operands));
+
+  }
+
+  @Test
+  public void diffOperationSuccessfulNotEquals() {
+    DifferenceOperand leftOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    DifferenceOperand rightOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    List<DifferenceOperand> operands = asList(leftOperand, rightOperand);
+
+    Difference difference = new Difference(1, 1);
+    List<Difference> differenceList = singletonList(difference);
+
+    // Set expectations
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(operands);
+    when(differentiable.diff(any(byte[].class), any(byte[].class))).thenReturn(differenceList);
+
+    // Invoke method to test
+    ResponseEntity<DifferencesResponse> response = differencesController.diffOperation(id);
+
+    assertThat("There is a result", response, is(notNullValue()));
+    assertThat("HTTP return code is OK (200)", response.getStatusCode(), is(OK));
+
+    DifferencesResponse differences = response.getBody();
+
+    assertThat("Message matches expected value", differences.getMessage(), is("Byte arrays are NOT equal!"));
+    assertThat("There are no differences", differences.getDifferences(), is(differenceList));
+
+    // Verify mocks invocations
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
+    verify(repository, times(1)).saveAll(eq(operands));
+    verify(differentiable, times(1)).diff(any(byte[].class), any(byte[].class));
 
   }
 
   @Test
   public void diffOperationUnsuccessful() {
 
-    DiffOperands<byte[]> operands = new DiffOperands<>(new byte[10], new byte[10]);
+    DifferenceOperand rightOperand = DifferenceOperand.from(id, request.getPayload(), false);
+    List<DifferenceOperand> operands = singletonList(rightOperand);
 
     // Set expectations
-    when(storage.remove(id)).thenReturn(null);
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(operands);
 
     ResponseEntity<DifferencesResponse> response = differencesController.diffOperation(id);
 
@@ -266,8 +408,7 @@ public class DifferencesControllerTest {
     assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
 
     // Verify mocks invocations
-    verify(storage, times(1)).remove(id);
-    verify(differentiable, never()).diff(eq(operands.getLeft()), eq(operands.getRight()));
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
 
   }
 
@@ -286,8 +427,58 @@ public class DifferencesControllerTest {
 
   }
 
+  @Test
+  public void diffOperationInvalidOperands() {
+
+    DifferenceOperand leftOperand = DifferenceOperand.from(id, null, false);
+    DifferenceOperand rightOperand = DifferenceOperand.from(id, null, false);
+    List<DifferenceOperand> operands = asList(leftOperand, rightOperand);
+
+    // Set expectations
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(operands);
+
+    ResponseEntity<DifferencesResponse> response = differencesController.diffOperation(id);
+
+    assertThat("There is a result", response, is(notNullValue()));
+    assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
+
+    DifferencesResponse differences = response.getBody();
+
+    assertThat("Message matches expected value", differences.getMessage(), is("Cannot operate with either operand (Left/Right) missing!"));
+    assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
+
+    // Verify mocks invocations
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
+
+  }
+
+  @Test
+  public void diffOperationNullOperands() {
+
+    // Set expectations
+    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(null);
+
+    ResponseEntity<DifferencesResponse> response = differencesController.diffOperation(id);
+
+    assertThat("There is a result", response, is(notNullValue()));
+    assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
+
+    DifferencesResponse differences = response.getBody();
+
+    assertThat("Message matches expected value", differences.getMessage(), is(format("No comparison pending for ID [%s]", id)));
+    assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
+
+    // Verify mocks invocations
+    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
+
+  }
+
   private String createBase64Data() {
     byte[] buffer = new byte[1024];
+    return createBase64Data(buffer);
+  }
+
+  private String createBase64Data(byte[] buffer) {
     new Random().nextBytes(buffer);
     return Base64.getEncoder().encodeToString(buffer);
   }

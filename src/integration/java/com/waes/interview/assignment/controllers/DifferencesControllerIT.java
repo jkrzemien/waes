@@ -1,13 +1,13 @@
 package com.waes.interview.assignment.controllers;
 
 import com.waes.interview.assignment.models.Difference;
+import com.waes.interview.assignment.models.DifferencesRequest;
 import com.waes.interview.assignment.models.DifferencesResponse;
 import org.junit.Before;
 import org.junit.Test;
 
 import static com.waes.interview.assignment.controllers.AbstractControllerIntegrationTest.DiffEndpoint.*;
 import static java.util.Arrays.asList;
-import static java.util.UUID.randomUUID;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -22,16 +22,15 @@ public class DifferencesControllerIT extends AbstractControllerIntegrationTest {
   private static final DifferencesResponse EQUALS = new DifferencesResponse("Byte arrays are equal!");
   private static final DifferencesResponse NOT_EQUALS = new DifferencesResponse("Byte arrays are NOT equal!");
 
-  private String id;
+  private Long id;
 
   @Before
   public void setUp() {
-    this.id = randomUUID().toString();
+    this.id = 1L;
   }
 
   @Test
   public void doDiffEquals() throws Exception {
-
 
     String data = createBase64JsonData();
 
