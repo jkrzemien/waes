@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Immutable class to store incoming request to {@link com.waes.interview.assignment.controllers.DifferencesController DifferencesController}
+ * Immutable structure to store incoming request to {@link com.waes.interview.assignment.controllers.DifferencesController DifferencesController}
  *
  * @author Juan Krzemien
  */

@@ -5,6 +5,10 @@ import java.util.Objects;
 
 /**
  * Entity class to hold ID and Base64 data of an operand for difference operation in persistence layer.
+ * <p>
+ * This class serves as DTO for Spring JPA repository ({@link com.waes.interview.assignment.repositories.OperandsRepository OperandsRepository})
+ * <p>
+ * Assumption: It allows to store up to 1 MB of Base64 data
  *
  * @author Juan Krzemien
  */
@@ -18,7 +22,8 @@ public final class DifferenceOperand {
   @Column(name = "operationId", nullable = false)
   private Long operationId;
 
-  @Column(name = "operand", nullable = false, length = 1024 * 1024) // Store up to 1 MB of data for this assignment
+  // Assumption: Store up to 1 MB of data for this assignment
+  @Column(name = "operand", nullable = false, length = 1024 * 1024)
   private String base64Data;
 
   @Column(name = "processed", nullable = false)
@@ -41,30 +46,12 @@ public final class DifferenceOperand {
   }
 
   /**
-   * Sets the difference operation ID for this entity.
-   *
-   * @param operationId The difference operation ID
-   */
-  public void setOperationId(Long operationId) {
-    this.operationId = operationId;
-  }
-
-  /**
    * Sets the Base64 data to hold
    *
    * @param base64Data String in Base64 format of the data to hold
    */
   public void setBase64Data(String base64Data) {
     this.base64Data = base64Data;
-  }
-
-  /**
-   * Marks the operand as already processed to avoid considering it in future operations, while keeping historical data.
-   *
-   * @param processed true if operand has been used in a difference operation already, false otherwise.
-   */
-  public void setProcessed(boolean processed) {
-    this.processed = processed;
   }
 
   /**
@@ -83,6 +70,15 @@ public final class DifferenceOperand {
    */
   public Long getOperationId() {
     return operationId;
+  }
+
+  /**
+   * Sets the difference operation ID for this entity.
+   *
+   * @param operationId The difference operation ID
+   */
+  public void setOperationId(Long operationId) {
+    this.operationId = operationId;
   }
 
   /**
@@ -110,6 +106,15 @@ public final class DifferenceOperand {
    */
   public boolean isProcessed() {
     return processed;
+  }
+
+  /**
+   * Marks the operand as already processed to avoid considering it in future operations, while keeping historical data.
+   *
+   * @param processed true if operand has been used in a difference operation already, false otherwise.
+   */
+  public void setProcessed(boolean processed) {
+    this.processed = processed;
   }
 
   /**

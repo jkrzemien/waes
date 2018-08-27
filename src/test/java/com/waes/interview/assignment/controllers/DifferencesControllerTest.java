@@ -25,7 +25,6 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.OK;
@@ -389,7 +388,7 @@ public class DifferencesControllerTest {
   }
 
   @Test
-  public void diffOperationUnsuccessful() {
+  public void diffOperationWithoutOneOperand() {
 
     DifferenceOperand rightOperand = DifferenceOperand.from(id, request.getPayload(), false);
     List<DifferenceOperand> operands = singletonList(rightOperand);
@@ -445,27 +444,6 @@ public class DifferencesControllerTest {
     DifferencesResponse differences = response.getBody();
 
     assertThat("Message matches expected value", differences.getMessage(), is("Cannot operate with either operand (Left/Right) missing!"));
-    assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
-
-    // Verify mocks invocations
-    verify(repository, times(1)).findByOperationIdAndProcessed(eq(id), eq(false));
-
-  }
-
-  @Test
-  public void diffOperationNullOperands() {
-
-    // Set expectations
-    when(repository.findByOperationIdAndProcessed(id, false)).thenReturn(null);
-
-    ResponseEntity<DifferencesResponse> response = differencesController.diffOperation(id);
-
-    assertThat("There is a result", response, is(notNullValue()));
-    assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
-
-    DifferencesResponse differences = response.getBody();
-
-    assertThat("Message matches expected value", differences.getMessage(), is(format("No comparison pending for ID [%s]", id)));
     assertThat("There are no differences", differences.getDifferences().isEmpty(), is(true));
 
     // Verify mocks invocations

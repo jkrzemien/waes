@@ -7,6 +7,7 @@ import com.waes.interview.assignment.models.DifferencesRequest;
 import com.waes.interview.assignment.models.DifferencesResponse;
 import com.waes.interview.assignment.repositories.OperandsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,6 +44,7 @@ public class DifferencesController {
   private static final String INVALID_BASE64_PAYLOAD = "Invalid Base64 payload!";
   private static final String DUPLICATE_TRANSACTION_ID = "The transaction ID has pending operations. Please, specify a different one.";
   private static final String WRONG_INVOCATION_ORDER = "Must call endpoint /left before calling endpoint /right";
+  private static final String DATA_INTEGRITY = "Payload cannot exceed 1 MB in size!";
 
   /**
    * Class members
@@ -72,21 +74,28 @@ public class DifferencesController {
   @ResponseBody
   public ResponseEntity<DifferencesResponse> leftOperand(@PathVariable Long id, @RequestBody DifferencesRequest request) {
 
+    // Fail upon invalid IDs
     if (id == null) {
       return badRequest().body(new DifferencesResponse(INVALID_ID));
     }
 
+    // Fail upon invalid requests
     if (request == null || request.getPayload().isEmpty()) {
       return badRequest().body(new DifferencesResponse(INVALID_BASE64_PAYLOAD));
     }
 
+    // Fail upon already defined operand for transaction ID
     if (repository.existsByOperationIdAndProcessed(id, false)) {
       return badRequest().body(new DifferencesResponse(DUPLICATE_TRANSACTION_ID));
     }
 
     DifferenceOperand operand = DifferenceOperand.from(id, request.getPayload(), false);
 
-    repository.save(operand);
+    try {
+      repository.save(operand);
+    } catch (DataIntegrityViolationException e) {
+      return badRequest().body(new DifferencesResponse(DATA_INTEGRITY));
+    }
 
     return ok(new DifferencesResponse("Done"));
   }
@@ -102,25 +111,33 @@ public class DifferencesController {
   @ResponseBody
   public ResponseEntity<DifferencesResponse> rightOperand(@PathVariable Long id, @RequestBody DifferencesRequest request) {
 
+    // Fail upon invalid IDs
     if (id == null) {
       return badRequest().body(new DifferencesResponse(INVALID_ID));
     }
 
+    // Fail upon invalid requests
     if (request == null || request.getPayload().isEmpty()) {
       return badRequest().body(new DifferencesResponse(INVALID_BASE64_PAYLOAD));
     }
 
     List<DifferenceOperand> transactions = repository.findByOperationIdAndProcessed(id, false);
 
+    // Fail upon wrong invocation order
     if (transactions.isEmpty()) {
       return badRequest().body(new DifferencesResponse(WRONG_INVOCATION_ORDER));
     } else if (transactions.size() > 1) {
+      // Fail upon already defined operand for transaction ID
       return badRequest().body(new DifferencesResponse(DUPLICATE_TRANSACTION_ID));
     }
 
     DifferenceOperand operand = DifferenceOperand.from(id, request.getPayload(), false);
 
-    repository.save(operand);
+    try {
+      repository.save(operand);
+    } catch (DataIntegrityViolationException e) {
+      return badRequest().body(new DifferencesResponse(DATA_INTEGRITY));
+    }
 
     return ok(new DifferencesResponse("Done"));
   }
@@ -135,17 +152,19 @@ public class DifferencesController {
   @ResponseBody
   public ResponseEntity<DifferencesResponse> diffOperation(@PathVariable Long id) {
 
+    // Fail upon invalid IDs
     if (id == null) {
       return badRequest().body(new DifferencesResponse(INVALID_ID));
     }
 
-    List<DifferenceOperand> operands = repository.findByOperationIdAndProcessed(id, false);
+    final List<DifferenceOperand> operands = repository.findByOperationIdAndProcessed(id, false);
 
-    if (operands == null || operands.size() != 2) {
+    // Fail upon operands count mismatch
+    if (operands.size() != 2) {
       return badRequest().body(new DifferencesResponse(format(NO_COMPARISON_PENDING_FOR_ID, id)));
     }
 
-    // Do not operate on invalid operands
+    // Fail upon invalid operands
     if (operands.stream().anyMatch(operand -> !operand.isValid())) {
       return badRequest().body(new DifferencesResponse(INVALID_OPERANDS));
     }
@@ -153,12 +172,13 @@ public class DifferencesController {
     byte[] left = decode(operands.get(0).getData());
     byte[] right = decode(operands.get(1).getData());
 
-    // Do not operate on different length arrays
+    // Do not operate on different length arrays, just indicate they are not equal
     if (left.length != right.length) {
       markOperandsAsProcessed(operands);
       return ok().body(new DifferencesResponse(BYTE_ARRAYS_ARE_NOT_EQUAL));
     }
 
+    // Process operands
     final List<Difference> differences = differentiable.diff(left, right);
 
     markOperandsAsProcessed(operands);

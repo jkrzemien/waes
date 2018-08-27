@@ -67,7 +67,7 @@ public class DifferencesSteps {
 
   /**
    * Helper method to convert file contents into Base64 strings.
-   *
+   * <p>
    * This kind of reusable methods should be part of the test automation framework used to perform testing.
    *
    * @param fileName File to convert to Base64

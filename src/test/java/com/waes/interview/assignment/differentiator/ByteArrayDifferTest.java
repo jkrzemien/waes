@@ -46,7 +46,7 @@ public class ByteArrayDifferTest {
   /**
    * Class under test
    */
-  private ByteArrayDiffer byteArrayDiffer = new ByteArrayDiffer();
+  private final ByteArrayDiffer byteArrayDiffer = new ByteArrayDiffer();
 
   /**
    * Constructor for test suite. As this test suite is a parameterized data driven one, JUnit 4 runner requires
@@ -112,7 +112,7 @@ public class ByteArrayDifferTest {
 
     assertThat("Differences match expectations", differences, is(expected));
 
-    /**
+    /*
      * Left this code commented on purpose as it denotes the validations that would be required to perform in
      * case one does not override equals() and, consequently, hashCode() methods in {@link Difference Difference} class.
      *

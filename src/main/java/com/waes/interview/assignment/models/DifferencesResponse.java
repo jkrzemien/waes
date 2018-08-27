@@ -96,4 +96,11 @@ public final class DifferencesResponse {
     return Objects.hash(message, differences);
   }
 
+  @Override
+  public String toString() {
+    return "DifferencesResponse{" +
+        "message='" + message + '\'' +
+        ", differences=" + differences +
+        '}';
+  }
 }

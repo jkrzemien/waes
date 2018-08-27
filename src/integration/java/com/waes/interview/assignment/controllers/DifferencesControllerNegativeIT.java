@@ -23,6 +23,7 @@ public class DifferencesControllerNegativeIT extends AbstractControllerIntegrati
   private static final DifferencesResponse DONE = new DifferencesResponse("Done");
   private static final DifferencesResponse INVALID = new DifferencesResponse("Invalid Base64 payload!");
   private static final DifferencesResponse WRONG_ORDER = new DifferencesResponse("Must call endpoint /left before calling endpoint /right");
+  private static final DifferencesResponse DATA_INTEGRITY = new DifferencesResponse("Payload cannot exceed 1 MB in size!");
 
   private Long id;
 
@@ -89,6 +90,36 @@ public class DifferencesControllerNegativeIT extends AbstractControllerIntegrati
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message", is(format("No comparison pending for ID [%s]", id))))
         .andExpect(jsonPath("$", not(hasKey("differences"))));
+
+  }
+
+  @Test
+  public void payloadExceeds1MBLeftOperand() throws Exception {
+
+    final byte[] LARGE_BYTE_ARRAY = new byte[1024 * 1024 + 1];
+
+    final String data = createBase64JsonData(LARGE_BYTE_ARRAY);
+
+    DifferencesResponse response = doPostAndReturn(ENDPOINT_LEFT.with(id), data, status().isBadRequest(), DifferencesResponse.class);
+
+    assertThat("Response matches expectation", response, is(DATA_INTEGRITY));
+
+  }
+
+  @Test
+  public void payloadExceeds1MBRightOperand() throws Exception {
+
+    final byte[] LARGE_BYTE_ARRAY = new byte[1024 * 1024 + 1];
+
+    final String data = createBase64JsonData(LARGE_BYTE_ARRAY);
+
+    DifferencesResponse response = doPostAndReturn(ENDPOINT_LEFT.with(id), createBase64JsonData(), DifferencesResponse.class);
+
+    assertThat("Response matches expectation", response, is(DONE));
+
+    response = doPostAndReturn(ENDPOINT_RIGHT.with(id), data, status().isBadRequest(), DifferencesResponse.class);
+
+    assertThat("Response matches expectation", response, is(DATA_INTEGRITY));
 
   }
 

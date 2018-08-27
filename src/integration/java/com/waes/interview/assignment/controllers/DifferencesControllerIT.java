@@ -1,10 +1,11 @@
 package com.waes.interview.assignment.controllers;
 
 import com.waes.interview.assignment.models.Difference;
-import com.waes.interview.assignment.models.DifferencesRequest;
 import com.waes.interview.assignment.models.DifferencesResponse;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Random;
 
 import static com.waes.interview.assignment.controllers.AbstractControllerIntegrationTest.DiffEndpoint.*;
 import static java.util.Arrays.asList;
@@ -24,9 +25,12 @@ public class DifferencesControllerIT extends AbstractControllerIntegrationTest {
 
   private Long id;
 
+  /**
+   * Generate a random ID per test
+   */
   @Before
   public void setUp() {
-    this.id = 1L;
+    this.id = new Random().nextLong();
   }
 
   @Test

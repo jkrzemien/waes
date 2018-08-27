@@ -23,9 +23,9 @@ public enum TestContext {
 
   CONTEXT;
 
-  public static final String SUT_ENV = "SUT_ENV";
-  public static final String DEFAULT_URL = "http://localhost:8080";
-  public static final String BASE_URI = ofNullable(System.getenv(SUT_ENV)).orElse(DEFAULT_URL);
+  private static final String SUT_ENV = "SUT_ENV";
+  private static final String DEFAULT_URL = "http://localhost:8080";
+  private static final String BASE_URI = ofNullable(System.getenv(SUT_ENV)).orElse(DEFAULT_URL);
 
   private static final String WORKING_ENTITY = "WORKING_ENTITY";
   private static final String REQUEST_SPECIFICATION = "REQUEST_SPECIFICATION";
