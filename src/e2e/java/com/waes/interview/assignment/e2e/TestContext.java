@@ -149,7 +149,7 @@ public enum TestContext {
    * Clears all key/values stored for the current thread test context, then removes the current thread test context.
    */
   public void remove() {
-    testContexts.get().clear();
+    reset();
     testContexts.remove();
   }
 

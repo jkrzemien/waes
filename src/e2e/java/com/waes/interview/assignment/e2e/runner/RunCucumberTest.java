@@ -29,7 +29,6 @@ public class RunCucumberTest {
 
   @AfterClass
   public static void afterSuite() {
-    System.err.println("EXECUTED?");
     CONTEXT.remove();
   }
 
