@@ -1,4 +1,11 @@
-# WAES
+# WAES - Original implementation
+
+**NOTE:** There are *two different implementations* of this assignment:
+
+* `master` branch contains one solution, which restricts invocation order in REST API.
+* `alternative` branch contains another solution, allows to work with REST APIs in any order.
+
+The following documentation remains true for any solution branch.
 
 ## Assignment
 
