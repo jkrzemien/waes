@@ -1,6 +1,13 @@
-# WAES
+# WAES - Alternative implementation
 
-## Assignment - Alternative implementation
+**NOTE:** There are *two different implementations* of this assignment:
+
+* `master` branch contains one solution, which restricts invocation order in REST API.
+* `alternative` branch contains another solution, which allows to work with REST APIs in any order.
+
+The following documentation remains true for any solution branch.
+
+## Assignment
 
 * Provide 2 http endpoints that accepts JSON base64 encoded binary data on both
 endpoints
