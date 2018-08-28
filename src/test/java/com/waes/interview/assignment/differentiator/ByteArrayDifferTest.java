@@ -32,6 +32,7 @@ public class ByteArrayDifferTest {
   private static final byte[] CASE_4_MULTIPLE_OFFSETS_1 = new byte[]{1, 0, 0, 0, 3};
   private static final byte[] CASE_5_MULTIPLE_OFFSETS_2 = new byte[]{1, 2, 0, 3, 4};
   private static final byte[] CASE_6_SIZE_DIFFERENCES = new byte[6];
+  private static final byte[] CASE_7_EMPTY_BYTE_ARRAY = new byte[0];
 
   /**
    * Constant expectations for some cases
@@ -103,6 +104,12 @@ public class ByteArrayDifferTest {
             "Differences in size between operands",
             BASE_BYTE_ARRAY,
             CASE_6_SIZE_DIFFERENCES,
+            NO_DIFFERENCES
+        },
+        {
+            "Empty operands match",
+            CASE_7_EMPTY_BYTE_ARRAY,
+            CASE_7_EMPTY_BYTE_ARRAY,
             NO_DIFFERENCES
         }
     };

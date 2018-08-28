@@ -1,6 +1,6 @@
 # WAES
 
-## Assignment
+## Assignment - Alternative implementation
 
 * Provide 2 http endpoints that accepts JSON base64 encoded binary data on both
 endpoints

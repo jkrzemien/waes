@@ -1,19 +1,22 @@
 package com.waes.interview.assignment.models;
 
 import javax.persistence.*;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Entity class to hold ID and Base64 data of an operand for difference operation in persistence layer.
+ * Abstract superclass for LEFT & RIGHT entity classes to hold ID and Base64 data of an operand for
+ * difference operation in persistence layer.
  * <p>
- * This class serves as DTO for Spring JPA repository ({@link com.waes.interview.assignment.repositories.OperandsRepository OperandsRepository})
+ * This class serves as DTO for Spring JPA repositories
  * <p>
  * Assumption: It allows to store up to 1 MB of Base64 data
  *
  * @author Juan Krzemien
  */
-@Entity
-public final class DifferenceOperand {
+@MappedSuperclass
+public abstract class AbstractOperand {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
@@ -26,24 +29,8 @@ public final class DifferenceOperand {
   @Column(name = "operand", nullable = false, length = 1024 * 1024)
   private String base64Data;
 
-  @Column(name = "processed", nullable = false)
-  private boolean processed;
-
-  /**
-   * Factory method for instances. Avoid duplicating several lines in code.
-   *
-   * @param id        Transaction ID
-   * @param payload   Base64 data to store
-   * @param processed Flag to indicate whether operand has been processed by controller or not
-   * @return An {@link DifferenceOperand DifferenceOperand} instance populated with provided values
-   */
-  public static DifferenceOperand from(Long id, String payload, boolean processed) {
-    DifferenceOperand operand = new DifferenceOperand();
-    operand.setOperationId(id);
-    operand.setBase64Data(payload);
-    operand.setProcessed(processed);
-    return operand;
-  }
+  @Column(name = "created", nullable = false)
+  private final Timestamp created = Timestamp.from(Instant.now());
 
   /**
    * Sets the Base64 data to hold
@@ -91,30 +78,12 @@ public final class DifferenceOperand {
   }
 
   /**
-   * Checks if entity contains workable data
+   * Retrieves creation timestamp of entity.
    *
-   * @return true if none of the entity attributes are null or Base64 data is empty, false otherwise.
+   * @return Entity's creation date time
    */
-  public boolean isValid() {
-    return operationId != null && base64Data != null && !base64Data.isEmpty();
-  }
-
-  /**
-   * Flag indicating whether this entity has been already processed to avoid considering it in future operations, while keeping historical data.
-   *
-   * @return true if operand has been used in a difference operation already, false otherwise.
-   */
-  public boolean isProcessed() {
-    return processed;
-  }
-
-  /**
-   * Marks the operand as already processed to avoid considering it in future operations, while keeping historical data.
-   *
-   * @param processed true if operand has been used in a difference operation already, false otherwise.
-   */
-  public void setProcessed(boolean processed) {
-    this.processed = processed;
+  public Timestamp getCreated() {
+    return created;
   }
 
   /**
@@ -127,11 +96,11 @@ public final class DifferenceOperand {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    DifferenceOperand that = (DifferenceOperand) o;
-    return processed == that.processed &&
-        Objects.equals(id, that.id) &&
+    AbstractOperand that = (AbstractOperand) o;
+    return Objects.equals(id, that.id) &&
         Objects.equals(operationId, that.operationId) &&
-        Objects.equals(base64Data, that.base64Data);
+        Objects.equals(base64Data, that.base64Data) &&
+        Objects.equals(created, that.created);
   }
 
   /**
@@ -143,6 +112,6 @@ public final class DifferenceOperand {
    */
   @Override
   public int hashCode() {
-    return Objects.hash(id, operationId, base64Data, processed);
+    return Objects.hash(id, operationId, base64Data, created);
   }
 }

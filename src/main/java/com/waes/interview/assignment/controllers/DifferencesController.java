@@ -1,11 +1,9 @@
 package com.waes.interview.assignment.controllers;
 
 import com.waes.interview.assignment.differentiator.Differentiable;
-import com.waes.interview.assignment.models.Difference;
-import com.waes.interview.assignment.models.DifferenceOperand;
-import com.waes.interview.assignment.models.DifferencesRequest;
-import com.waes.interview.assignment.models.DifferencesResponse;
-import com.waes.interview.assignment.repositories.OperandsRepository;
+import com.waes.interview.assignment.models.*;
+import com.waes.interview.assignment.repositories.LeftOperandsRepository;
+import com.waes.interview.assignment.repositories.RightOperandsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
@@ -27,9 +25,6 @@ import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
  * POST /v1/diff/{id}/left
  * POST /v1/diff/{id}/right
  * GET /v1/diff/{id}
- * <p>
- * Assumption: A differentiation cannot be done without 2 sides (left & right) so I designed this controller
- * to require consumers to set /left operand FIRST and THEN to set /right operand. Meaning API invocation order matters.
  *
  * @author Juan Krzemien
  */
@@ -41,28 +36,28 @@ public class DifferencesController {
    */
   private static final String INVALID_ID = "Invalid ID";
   private static final String NO_COMPARISON_PENDING_FOR_ID = "No comparison pending for ID [%s]";
-  private static final String INVALID_OPERANDS = "Cannot operate with either operand (Left/Right) missing!";
   private static final String BYTE_ARRAYS_ARE_NOT_EQUAL = "Byte arrays are NOT equal!";
   private static final String BYTE_ARRAYS_ARE_EQUAL = "Byte arrays are equal!";
   private static final String INVALID_BASE64_PAYLOAD = "Invalid Base64 payload!";
-  private static final String DUPLICATE_TRANSACTION_ID = "The transaction ID has pending operations. Please, specify a different one.";
-  private static final String WRONG_INVOCATION_ORDER = "Must call endpoint /left before calling endpoint /right";
   private static final String DATA_INTEGRITY = "Payload cannot exceed 1 MB in size!";
 
   /**
    * Class members
    */
-  private final OperandsRepository repository;
+  private final LeftOperandsRepository leftRepository;
+  private final RightOperandsRepository rightRepository;
   private final Differentiable<byte[]> differentiable;
 
   /**
    * Constructor
    *
-   * @param repository     Implementation of a storage for operands between endpoint invocations.
-   * @param differentiable Implementation of a differentiable for diff-ing /left and /right endpoints
+   * @param leftRepository  Implementation of a storage for operands between endpoint invocations.
+   * @param rightRepository Implementation of a storage for operands between endpoint invocations.
+   * @param differentiable  Implementation of a differentiable for diff-ing /left and /right endpoints
    */
-  public DifferencesController(@Autowired OperandsRepository repository, @Autowired Differentiable<byte[]> differentiable) {
-    this.repository = repository;
+  public DifferencesController(@Autowired LeftOperandsRepository leftRepository, @Autowired RightOperandsRepository rightRepository, @Autowired Differentiable<byte[]> differentiable) {
+    this.leftRepository = leftRepository;
+    this.rightRepository = rightRepository;
     this.differentiable = differentiable;
   }
 
@@ -87,15 +82,10 @@ public class DifferencesController {
       return badRequest().body(new DifferencesResponse(INVALID_BASE64_PAYLOAD));
     }
 
-    // Fail upon already defined operand for transaction ID
-    if (repository.existsByOperationIdAndProcessed(id, false)) {
-      return badRequest().body(new DifferencesResponse(DUPLICATE_TRANSACTION_ID));
-    }
-
-    DifferenceOperand operand = DifferenceOperand.from(id, request.getPayload(), false);
+    LeftOperand operand = LeftOperand.from(id, request.getPayload());
 
     try {
-      repository.save(operand);
+      leftRepository.save(operand);
     } catch (DataIntegrityViolationException e) {
       return badRequest().body(new DifferencesResponse(DATA_INTEGRITY));
     }
@@ -124,20 +114,10 @@ public class DifferencesController {
       return badRequest().body(new DifferencesResponse(INVALID_BASE64_PAYLOAD));
     }
 
-    List<DifferenceOperand> transactions = repository.findByOperationIdAndProcessed(id, false);
-
-    // Fail upon wrong invocation order
-    if (transactions.isEmpty()) {
-      return badRequest().body(new DifferencesResponse(WRONG_INVOCATION_ORDER));
-    } else if (transactions.size() > 1) {
-      // Fail upon already defined operand for transaction ID
-      return badRequest().body(new DifferencesResponse(DUPLICATE_TRANSACTION_ID));
-    }
-
-    DifferenceOperand operand = DifferenceOperand.from(id, request.getPayload(), false);
+    RightOperand operand = RightOperand.from(id, request.getPayload());
 
     try {
-      repository.save(operand);
+      rightRepository.save(operand);
     } catch (DataIntegrityViolationException e) {
       return badRequest().body(new DifferencesResponse(DATA_INTEGRITY));
     }
@@ -160,31 +140,24 @@ public class DifferencesController {
       return badRequest().body(new DifferencesResponse(INVALID_ID));
     }
 
-    final List<DifferenceOperand> operands = repository.findByOperationIdAndProcessed(id, false);
+    final List<LeftOperand> leftOperands = leftRepository.findTopByOperationIdOrderByCreatedDesc(id);
+    final List<RightOperand> rightOperands = rightRepository.findTopByOperationIdOrderByCreatedDesc(id);
 
     // Fail upon operands count mismatch
-    if (operands.size() != 2) {
+    if (leftOperands.size() != 1 || rightOperands.size() != 1) {
       return badRequest().body(new DifferencesResponse(format(NO_COMPARISON_PENDING_FOR_ID, id)));
     }
 
-    // Fail upon invalid operands
-    if (operands.stream().anyMatch(operand -> !operand.isValid())) {
-      return badRequest().body(new DifferencesResponse(INVALID_OPERANDS));
-    }
-
-    byte[] left = decode(operands.get(0).getData());
-    byte[] right = decode(operands.get(1).getData());
+    byte[] left = decode(leftOperands.get(0).getData());
+    byte[] right = decode(rightOperands.get(0).getData());
 
     // Do not operate on different length arrays, just indicate they are not equal
     if (left.length != right.length) {
-      markOperandsAsProcessed(operands);
       return ok().body(new DifferencesResponse(BYTE_ARRAYS_ARE_NOT_EQUAL));
     }
 
     // Process operands
     final List<Difference> differences = differentiable.diff(left, right);
-
-    markOperandsAsProcessed(operands);
 
     // If we noticed differences, then arrays were not equal
     if (!differences.isEmpty()) {
@@ -193,16 +166,6 @@ public class DifferencesController {
 
     // Otherwise, arrays were equals
     return ok(new DifferencesResponse(BYTE_ARRAYS_ARE_EQUAL, differences));
-  }
-
-  /**
-   * Marks the operands as processed by {@link DifferencesController DifferencesController}.
-   *
-   * @param operands List of operands to set as processed
-   */
-  private void markOperandsAsProcessed(List<DifferenceOperand> operands) {
-    operands.forEach(operand -> operand.setProcessed(true));
-    repository.saveAll(operands);
   }
 
   /**

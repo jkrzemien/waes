@@ -46,15 +46,6 @@ public class DifferencesControllerNegativeIT extends AbstractControllerIntegrati
   }
 
   @Test
-  public void setRightContentWithoutLeft() throws Exception {
-
-    DifferencesResponse response = doPostAndReturn(ENDPOINT_RIGHT.with(id), createBase64JsonData(), status().isBadRequest(), DifferencesResponse.class);
-
-    assertThat("Response matches expectation", response, is(WRONG_ORDER));
-
-  }
-
-  @Test
   public void setRightContentNoSize() throws Exception {
 
     DifferencesResponse response = doPostAndReturn(ENDPOINT_LEFT.with(id), createBase64JsonData(), DifferencesResponse.class);
