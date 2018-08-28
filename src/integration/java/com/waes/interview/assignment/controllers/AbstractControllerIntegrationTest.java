@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = App.class)
 @AutoConfigureMockMvc
-public abstract class AbstractControllerIntegrationTest {
+abstract class AbstractControllerIntegrationTest {
 
   private static final ObjectMapper mapper = new ObjectMapper();
   private static final Random RANDOM = new Random();

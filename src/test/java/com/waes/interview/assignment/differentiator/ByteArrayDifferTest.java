@@ -16,6 +16,8 @@ import static org.junit.Assert.assertThat;
 
 /**
  * Data driven JUnit 4 test suite for {@link ByteArrayDiffer ByteArrayDiffer} class.
+ *
+ * @author Juan Krzemien
  */
 @RunWith(Parameterized.class)
 public class ByteArrayDifferTest {

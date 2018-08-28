@@ -119,7 +119,7 @@ public class DifferencesControllerTest {
     ResponseEntity<DifferencesResponse> response = differencesController.leftOperand(id, request);
 
     assertThat("There is a result", response, is(notNullValue()));
-    assertThat("HTTP return code is OK (200)", response.getStatusCode(), is(BAD_REQUEST));
+    assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
 
     DifferencesResponse differences = response.getBody();
 
@@ -192,7 +192,7 @@ public class DifferencesControllerTest {
     ResponseEntity<DifferencesResponse> response = differencesController.rightOperand(id, request);
 
     assertThat("There is a result", response, is(notNullValue()));
-    assertThat("HTTP return code is OK (200)", response.getStatusCode(), is(BAD_REQUEST));
+    assertThat("HTTP return code is BAD REQUEST (400)", response.getStatusCode(), is(BAD_REQUEST));
 
     DifferencesResponse differences = response.getBody();
 

@@ -27,6 +27,9 @@ import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
  * POST /v1/diff/{id}/left
  * POST /v1/diff/{id}/right
  * GET /v1/diff/{id}
+ * <p>
+ * Assumption: A differentiation cannot be done without 2 sides (left & right) so I designed this controller
+ * to require consumers to set /left operand FIRST and THEN to set /right operand. Meaning API invocation order matters.
  *
  * @author Juan Krzemien
  */
@@ -214,6 +217,7 @@ public class DifferencesController {
     try {
       return getDecoder().decode(base64Data);
     } catch (Exception e) {
+      // Should never happen
       return new byte[0];
     }
   }

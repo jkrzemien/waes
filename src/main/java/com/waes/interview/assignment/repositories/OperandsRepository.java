@@ -11,7 +11,7 @@ import java.util.List;
  * Interface to interact against SQL database (in-memory H2 in this case) via Spring JPA.
  * <p>
  * Allows CRUD operations on {@link DifferenceOperand DifferenceOperand} instances and defines two more methods
- * for filtering further.
+ * for further filtering.
  *
  * @author Juan Krzemien
  */

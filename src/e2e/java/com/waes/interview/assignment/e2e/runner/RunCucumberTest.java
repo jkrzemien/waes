@@ -10,7 +10,7 @@ import static com.waes.interview.assignment.e2e.TestContext.CONTEXT;
 /**
  * Cucumber's JUnit based tests runner definition.
  * <p>
- * It is the entry point for E2E tests.
+ * It is the entry point for Cucumber E2E tests.
  *
  * @author Juan Krzemien
  */
